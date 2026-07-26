@@ -1,0 +1,140 @@
+// This is your Prisma schema file for Khadim Alharamain ERP Umrah & Haji
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  DIRECTOR
+  ACCOUNTANT
+  TREASURY
+  BRANCH_ADMIN
+  AGENT
+}
+
+enum PaymentStatusValidation {
+  PENDING
+  VALIDATED
+  REJECTED
+}
+
+enum JamaahStatus {
+  ACTIVE
+  INACTIVE
+  DEPARTED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  fullName     String   @map("full_name")
+  role         Role     @default(ACCOUNTANT)
+  avatarUrl    String?  @map("avatar_url")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  receiptsCreated PaymentReceipt[]
+  journalsCreated JournalEntry[]
+
+  @@map("users")
+}
+
+model Jamaah {
+  id          String       @id @default(cuid())
+  nomorKTP    String       @unique @map("nomor_ktp")
+  namaLengkap String       @map("nama_lengkap")
+  noPassport  String?      @map("no_passport")
+  telepon     String?
+  address     String?      @db.Text
+  status      JamaahStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  paymentReceipts PaymentReceipt[]
+  registrations   JamaahRegistration[]
+
+  // Requested Indexing
+  @@index([namaLengkap])
+  @@map("jamaah")
+}
+
+model PaymentReceipt {
+  id               String                  @id @default(cuid())
+  receiptNo        String                  @unique @map("receipt_no")
+  jamaahId         String                  @map("jamaah_id")
+  jamaah           Jamaah                  @relation(fields: [jamaahId], references: [id], onDelete: Cascade)
+  amount           Decimal                 @db.Decimal(15, 2)
+  paymentDate      DateTime                @default(now()) @map("payment_date")
+  paymentMethod    String                  @map("payment_method")
+  fileUrl          String                  @db.Text @map("file_url") // Stores Public Storage URL (e.g., https://storage.googleapis.com/...)
+  statusValidation PaymentStatusValidation @default(PENDING) @map("status_validation")
+  createdById      String                  @map("created_by_id")
+  createdBy        User                    @relation(fields: [createdById], references: [id])
+  createdAt        DateTime                @default(now()) @map("created_at")
+  updatedAt        DateTime                @updatedAt @map("updated_at")
+
+  // Requested Indexing
+  @@index([receiptNo])
+  @@map("payment_receipts")
+}
+
+model JournalEntry {
+  id              String   @id @default(cuid())
+  journalNumber   String   @unique @map("journal_number")
+  transactionDate DateTime @map("transaction_date")
+  referenceType   String?  @map("reference_type")
+  referenceId     String?  @map("reference_id")
+  description     String   @db.Text
+  totalDebit      Decimal  @db.Decimal(15, 2) @map("total_debit")
+  totalCredit     Decimal  @db.Decimal(15, 2) @map("total_credit")
+  createdById     String?  @map("created_by_id")
+  createdBy       User?    @relation(fields: [createdById], references: [id])
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  lines JournalLine[]
+
+  // Requested Indexing
+  @@index([transactionDate])
+  @@map("journal_entries")
+}
+
+model JournalLine {
+  id          String       @id @default(cuid())
+  journalId   String       @map("journal_id")
+  journal     JournalEntry @relation(fields: [journalId], references: [id], onDelete: Cascade)
+  accountCode String       @map("account_code")
+  accountName String       @map("account_name")
+  debit       Decimal      @default(0) @db.Decimal(15, 2)
+  credit      Decimal      @default(0) @db.Decimal(15, 2)
+  memo        String?      @db.Text
+  kloterId    String?      @map("kloter_id")
+
+  @@map("journal_lines")
+}
+
+model JamaahRegistration {
+  id                 String   @id @default(cuid())
+  registrationNumber String   @unique @map("registration_number")
+  jamaahId           String   @map("jamaah_id")
+  jamaah             Jamaah   @relation(fields: [jamaahId], references: [id])
+  packageId          String   @map("package_id")
+  kloterId           String   @map("kloter_id")
+  roomType           String   @default("QUAD") @map("room_type")
+  totalBill          Decimal  @db.Decimal(15, 2) @map("total_bill")
+  paidAmount         Decimal  @default(0) @db.Decimal(15, 2) @map("paid_amount")
+  balanceDue         Decimal  @db.Decimal(15, 2) @map("balance_due")
+  status             String   @default("BOOKED")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@map("jamaah_registrations")
+}

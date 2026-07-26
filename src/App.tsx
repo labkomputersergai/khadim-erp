@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserRole, ChartOfAccount, JamaahRegistration, DepartureKloter, TravelPackage, Jamaah, JournalEntry, Vendor, VendorBill, VendorPayment, Mitra, MitraCommission } from './types';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { LoginView } from './components/LoginView';
 import { getRolePermissions } from './utils/rbac';
 import { HeaderNavbar } from './components/HeaderNavbar';
 import { SidebarNav } from './components/SidebarNav';
@@ -16,11 +18,19 @@ import { MitraManagementView } from './components/MitraManagementView';
 import { AccessRestrictedNotice } from './components/AccessRestrictedNotice';
 import { Loader2 } from 'lucide-react';
 
-export default function App() {
+function ERPMainContent() {
+  const { user, isAuthenticated } = useAuth();
   const [userRole, setUserRole] = useState<UserRole>('ACCOUNTANT');
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+
+  // Sync role with logged in user, or let header switcher override
+  useEffect(() => {
+    if (user) {
+      setUserRole(user.role);
+    }
+  }, [user]);
 
   const rolePerm = getRolePermissions(userRole);
 
@@ -50,8 +60,10 @@ export default function App() {
 
   // Initial Fetch Data from Backend Express Server
   useEffect(() => {
-    fetchERPData();
-  }, []);
+    if (isAuthenticated) {
+      fetchERPData();
+    }
+  }, [isAuthenticated]);
 
   const fetchERPData = async () => {
     setIsLoading(true);
@@ -96,6 +108,10 @@ export default function App() {
     }
   };
 
+  if (!isAuthenticated) {
+    return <LoginView />;
+  }
+
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#F8FAFC] dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans flex">
       
@@ -109,7 +125,9 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen w-full max-w-full overflow-x-hidden">
+      <div className={`flex-1 flex flex-col min-w-0 min-h-screen w-full max-w-full transition-all duration-300 ease-in-out ${
+        isCollapsed ? 'ml-14 sm:ml-16 md:ml-20' : 'ml-64'
+      }`}>
         
         {/* Topbar Header */}
         <HeaderNavbar
@@ -119,6 +137,7 @@ export default function App() {
           isLoading={isLoading}
           isCollapsed={isCollapsed}
           setIsCollapsed={setIsCollapsed}
+          onNavigateTab={(tab) => setActiveTab(tab)}
         />
 
         {/* View Content Body */}
@@ -267,5 +286,13 @@ export default function App() {
       </div>
 
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <ERPMainContent />
+    </AuthProvider>
   );
 }

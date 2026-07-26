@@ -4,6 +4,7 @@ import { getRolePermissions } from '../utils/rbac';
 import { formatIDR } from '../utils/formatters';
 import { Building, PlusCircle, CheckCircle2, X, Lock, Users, Edit, Trash2, XCircle, Wallet, History, Paperclip, Eye, Upload, FileText } from 'lucide-react';
 import { FileViewerModal } from './FileViewerModal';
+import { uploadReceiptFile } from '../utils/uploadHelper';
 
 interface VendorPayablesViewProps {
   vendors: Vendor[];
@@ -64,21 +65,18 @@ export const VendorPayablesView: React.FC<VendorPayablesViewProps> = ({
   // Lightbox File Viewer Modal State
   const [activeFileViewer, setActiveFileViewer] = useState<{ url: string; name: string; title: string } | null>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setUrl: (u: string) => void, setName: (n: string) => void) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, setUrl: (u: string) => void, setName: (n: string) => void) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Ukuran file terlalu besar! Batas maksimal adalah 5MB.');
-      return;
+    try {
+      setName(file.name);
+      const uploaded = await uploadReceiptFile(file, 'vendor-bills');
+      setUrl(uploaded.fileUrl);
+      setName(uploaded.fileName);
+    } catch (err: any) {
+      alert(err.message || 'Gagal mengunggah lampiran vendor.');
     }
-
-    setName(file.name);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setUrl(reader.result as string);
-    };
-    reader.readAsDataURL(file);
   };
 
   // Form States (Vendor)

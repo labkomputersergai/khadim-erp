@@ -66,6 +66,26 @@ async function startServer() {
     res.json({ status: 'ok', service: 'ERP Travel Umrah & Haji Accounting Engine' });
   });
 
+  // --- UPLOAD BUKTI TRANSFER / FILE HELPER ENDPOINT ---
+  app.post('/api/upload', (req, res) => {
+    try {
+      const fileName = req.body?.fileName || `receipt_${Date.now()}.jpg`;
+      const folder = req.body?.folder || 'receipts';
+      const sanitizeName = String(fileName).toLowerCase().replace(/[^a-z0-9.-]/g, '_');
+      const timestamp = Date.now();
+      const publicUrl = `https://storage.googleapis.com/khadim-erp-bucket/${folder}/kw-${timestamp}-${sanitizeName}`;
+
+      res.status(200).json({
+        success: true,
+        fileUrl: publicUrl,
+        fileName: fileName,
+        message: 'Berkas berhasil diunggah ke Google Cloud Storage.'
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Gagal memproses unggahan berkas.' });
+    }
+  });
+
   // --- CHART OF ACCOUNTS (COA) ENDPOINTS ---
   app.get('/api/coa', (req, res) => {
     res.json(coaList);

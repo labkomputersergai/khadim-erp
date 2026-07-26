@@ -1,5 +1,6 @@
 import React from 'react';
 import { UserRole } from '../types';
+import { useAuth, getAvatarInitials } from '../context/AuthContext';
 import {
   LayoutDashboard,
   Users,
@@ -17,7 +18,8 @@ import {
   ChevronDown,
   RefreshCw,
   PanelLeftClose,
-  PanelLeft
+  PanelLeft,
+  LogOut
 } from 'lucide-react';
 
 export interface NavItem {
@@ -41,6 +43,8 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
   isCollapsed,
   setIsCollapsed
 }) => {
+  const { user, logout } = useAuth();
+
   // Navigation items strictly ordered as requested:
   // 1. Dashboard Utama
   // 2. Tagihan & Piutang Jamaah
@@ -67,90 +71,125 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
 
   return (
     <aside
-      className={`bg-[#0F172A] text-slate-100 border-r border-slate-800 flex flex-col justify-between shrink-0 transition-all duration-300 ease-in-out sticky top-0 h-screen z-40 ${
+      className={`fixed top-0 left-0 h-screen flex flex-col justify-between z-40 bg-[#0F172A] text-slate-100 border-r border-slate-800 transition-all duration-300 ease-in-out overflow-x-hidden ${
         isCollapsed ? 'w-14 sm:w-16 md:w-20' : 'w-64'
       }`}
     >
-      <div>
-        {/* Sidebar Header / Branding */}
-        <div className="h-16 px-4 flex items-center justify-between border-b border-slate-800">
-          <div className="flex items-center space-x-3 overflow-hidden">
-            <div className="w-9 h-9 rounded-sm bg-blue-600 flex items-center justify-center font-bold text-white shadow-md shrink-0 text-xs font-mono">
-              KA
-            </div>
-            {!isCollapsed && (
-              <div className="truncate transition-opacity duration-300">
-                <div className="flex items-center space-x-1.5">
-                  <h1 className="font-bold text-sm text-white tracking-tight truncate">
-                    Khadim Alharamain
-                  </h1>
-                </div>
-                <p className="text-[10px] text-slate-400 font-medium truncate">
-                  Sistem Informasi Keuangan
-                </p>
-              </div>
-            )}
+      {/* Sidebar Header / Branding */}
+      <div className={`h-16 flex items-center border-b border-slate-800 shrink-0 ${
+        isCollapsed ? 'justify-center px-2' : 'justify-between px-4'
+      }`}>
+        <div className="flex items-center space-x-3 overflow-hidden">
+          <div className="w-9 h-9 rounded-sm bg-blue-600 flex items-center justify-center font-bold text-white shadow-md shrink-0 text-xs font-mono">
+            KA
           </div>
-
-          {/* Minimize Toggle Button on Header */}
           {!isCollapsed && (
-            <button
-              onClick={() => setIsCollapsed(true)}
-              className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-              title="Kecilkan Sidebar"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
+            <div className="truncate transition-opacity duration-300">
+              <div className="flex items-center space-x-1.5">
+                <h1 className="font-bold text-sm text-white tracking-tight truncate">
+                  Khadim Alharamain
+                </h1>
+              </div>
+              <p className="text-[10px] text-slate-400 font-medium truncate">
+                Sistem Informasi Keuangan
+              </p>
+            </div>
           )}
         </div>
 
-        {/* Sidebar Nav List */}
-        <div className="p-3 space-y-1.5">
-          {visibleNavItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-
-            return (
-              <div key={item.id} className="relative group">
-                <button
-                  onClick={() => setActiveTab(item.id)}
-                  className={`w-full py-2.5 px-3 rounded-sm text-xs font-medium flex items-center transition-all ${
-                    isCollapsed ? 'justify-center' : 'justify-start space-x-3'
-                  } ${
-                    isActive
-                      ? 'bg-blue-600 text-white font-bold shadow-md ring-1 ring-blue-500/50'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} />
-                  {!isCollapsed && <span className="truncate">{item.label}</span>}
-                </button>
-
-                {/* Tooltip on Collapsed Hover */}
-                {isCollapsed && (
-                  <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-3 py-1.5 bg-slate-900 text-white text-xs font-semibold rounded-sm shadow-xl whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-50 border border-slate-700 flex items-center space-x-1">
-                    <span>{item.label}</span>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        {/* Minimize Toggle Button on Header */}
+        {!isCollapsed && (
+          <button
+            onClick={() => setIsCollapsed(true)}
+            className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            title="Kecilkan Sidebar"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
-      {/* Sidebar Footer / Expand Toggle */}
-      <div className="p-3 border-t border-slate-800">
-        {isCollapsed ? (
-          <button
-            onClick={() => setIsCollapsed(false)}
-            className="w-full py-2.5 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded-sm transition-colors group relative"
-            title="Perluas Sidebar"
-          >
-            <ChevronRight className="w-5 h-5" />
-            <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1 bg-slate-900 text-white text-xs rounded-sm opacity-0 pointer-events-none group-hover:opacity-100 whitespace-nowrap z-50 border border-slate-700">
-              Perluas Menu
+      {/* Sidebar Nav List (Scrollable Area with Hidden Scrollbar) */}
+      <div className={`flex-1 overflow-y-auto overflow-x-hidden scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+        isCollapsed ? 'py-3 px-2 space-y-1.5' : 'py-4 px-3 space-y-1'
+      }`}>
+        {visibleNavItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = activeTab === item.id;
+
+          return (
+            <div key={item.id} className="relative group">
+              <button
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full py-2.5 rounded-sm text-xs font-medium flex items-center transition-all ${
+                  isCollapsed ? 'justify-center px-2' : 'justify-start px-3 space-x-3'
+                } ${
+                  isActive
+                    ? 'bg-blue-600 text-white font-bold shadow-md ring-1 ring-blue-500/50'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+                }`}
+              >
+                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} />
+                {!isCollapsed && <span className="truncate">{item.label}</span>}
+              </button>
+
+              {/* Tooltip on Collapsed Hover */}
+              {isCollapsed && (
+                <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-3 py-1.5 bg-slate-900 text-white text-xs font-semibold rounded-sm shadow-xl whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-50 border border-slate-700 flex items-center space-x-1">
+                  <span>{item.label}</span>
+                </div>
+              )}
             </div>
-          </button>
+          );
+        })}
+      </div>
+
+      {/* Sidebar Footer / Expand Toggle & Logout */}
+      <div className={`border-t border-slate-800 shrink-0 bg-[#0F172A] ${isCollapsed ? 'p-2' : 'p-3'}`}>
+        {!isCollapsed && user && (
+          <div className="mb-2 p-2 bg-slate-900 rounded border border-slate-800 flex items-center justify-between">
+            <div className="flex items-center space-x-2 min-w-0 pr-1">
+              <div className="w-7 h-7 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-[10px] shrink-0 font-mono shadow-xs">
+                {getAvatarInitials(user)}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-200 truncate">{user.name}</p>
+                <p className="text-[10px] text-blue-400 font-medium truncate">{user.roleTitle}</p>
+              </div>
+            </div>
+            <button
+              onClick={logout}
+              className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded transition-colors shrink-0"
+              title="Keluar / Logout"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
+        {isCollapsed ? (
+          <div className="space-y-1">
+            <button
+              onClick={logout}
+              className="w-full py-2 flex items-center justify-center text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-sm transition-colors group relative"
+              title="Keluar dari Sistem (Logout)"
+            >
+              <LogOut className="w-4 h-4" />
+              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1 bg-rose-950 text-rose-200 text-xs rounded-sm opacity-0 pointer-events-none group-hover:opacity-100 whitespace-nowrap z-50 border border-rose-800">
+                Keluar (Logout)
+              </div>
+            </button>
+            <button
+              onClick={() => setIsCollapsed(false)}
+              className="w-full py-2 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded-sm transition-colors group relative"
+              title="Perluas Sidebar"
+            >
+              <ChevronRight className="w-5 h-5" />
+              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1 bg-slate-900 text-white text-xs rounded-sm opacity-0 pointer-events-none group-hover:opacity-100 whitespace-nowrap z-50 border border-slate-700">
+                Perluas Menu
+              </div>
+            </button>
+          </div>
         ) : (
           <div className="flex items-center justify-between text-[11px] text-slate-400 px-1">
             <span className="font-mono text-[10px] uppercase text-slate-500">v2.5 ERP</span>
