@@ -16,6 +16,7 @@ import { SettingsBackupView } from './components/SettingsBackupView';
 import { PackagesView } from './components/PackagesView';
 import { MitraManagementView } from './components/MitraManagementView';
 import { AccessRestrictedNotice } from './components/AccessRestrictedNotice';
+import { NonJamaahReceiptModal } from './components/NonJamaahReceiptModal';
 import { Loader2 } from 'lucide-react';
 
 function ERPMainContent() {
@@ -57,6 +58,7 @@ function ERPMainContent() {
   // Modal Open Trigger States for Quick Actions
   const [isNewPaymentOpen, setIsNewPaymentOpen] = useState(false);
   const [isNewRegistrationOpen, setIsNewRegistrationOpen] = useState(false);
+  const [isNonJamaahModalOpen, setIsNonJamaahModalOpen] = useState(false);
 
   // Initial Fetch Data from Backend Express Server
   useEffect(() => {
@@ -172,6 +174,7 @@ function ERPMainContent() {
                     setActiveTab('jamaah');
                     setIsNewRegistrationOpen(true);
                   }}
+                  onOpenNonJamaahReceipt={() => setIsNonJamaahModalOpen(true)}
                 />
               )}
 
@@ -237,6 +240,7 @@ function ERPMainContent() {
                   journals={journals}
                   coaList={coaList}
                   userRole={userRole}
+                  onRefreshData={fetchERPData}
                 />
               )}
 
@@ -275,6 +279,15 @@ function ERPMainContent() {
               )}
             </main>
           )}
+
+          {/* Modal Penerimaan Kas Non-Jamaah Global */}
+          <NonJamaahReceiptModal
+            isOpen={isNonJamaahModalOpen}
+            onClose={() => setIsNonJamaahModalOpen(false)}
+            coaList={coaList}
+            onRefreshData={fetchERPData}
+            userRole={userRole}
+          />
 
         </div>
 

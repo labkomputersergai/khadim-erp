@@ -24,6 +24,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   onClose
 }) => {
   const [isViewerOpen, setIsViewerOpen] = useState(false);
+
   // ESC Key listener to close modal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -43,7 +44,9 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   };
 
   const handlePrint = () => {
-    window.print();
+    setTimeout(() => {
+      window.print();
+    }, 100);
   };
 
   return (
@@ -51,26 +54,38 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
       onClick={handleBackdropClick}
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 overflow-y-auto print:p-0 print:bg-white print:static"
     >
-      {/* CSS Print Rules Injection */}
+      {/* CSS Print Rules Injection for Official Receipt */}
       <style>{`
         @media print {
+          @page {
+            size: A4 portrait;
+            margin: 12mm 10mm;
+          }
+          html, body {
+            background: #ffffff !important;
+            color: #000000 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
           body * {
             visibility: hidden !important;
           }
-          #receipt-modal-printable, #receipt-modal-printable * {
+          #kuitansi-printable-area, #kuitansi-printable-area * {
             visibility: visible !important;
           }
-          #receipt-modal-printable {
-            position: absolute !important;
+          #kuitansi-printable-area {
+            position: fixed !important;
             left: 0 !important;
             top: 0 !important;
             width: 100% !important;
+            max-width: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
             box-shadow: none !important;
             border: none !important;
-            background: white !important;
-            color: black !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            z-index: 999999 !important;
           }
           .print\\:hidden {
             display: none !important;
@@ -79,8 +94,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
       `}</style>
 
       <div
-        id="receipt-modal-printable"
-        className="bg-white text-slate-900 rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-200 overflow-hidden my-auto print:shadow-none print:border-none print:max-w-none print:w-full"
+        id="kuitansi-printable-area"
+        className="bg-white text-slate-900 rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-200 overflow-hidden my-auto print:shadow-none print:border-none print:max-w-none print:w-full print:rounded-none"
       >
         {/* Header Bar - Hidden on Print */}
         <div className="flex items-center justify-between px-6 py-4 bg-slate-900 text-white print:hidden">
@@ -91,7 +106,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           <div className="flex items-center space-x-2">
             <button
               onClick={handlePrint}
-              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg flex items-center space-x-1.5 transition-colors"
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg flex items-center space-x-1.5 transition-colors cursor-pointer"
               title="Cetak Kuitansi"
             >
               <Printer className="w-3.5 h-3.5" />
@@ -99,7 +114,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-white rounded-lg transition-colors"
+              className="p-1.5 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer"
               title="Tutup (ESC)"
             >
               <X className="w-5 h-5" />
@@ -108,7 +123,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
         </div>
 
         {/* Printable Receipt Body */}
-        <div id="receipt-content" className="p-8 space-y-6 bg-white">
+        <div className="p-8 space-y-6 bg-white print:p-4">
           
           {/* Company & Receipt Title */}
           <div className="flex items-start justify-between border-b pb-6 border-slate-200">
@@ -122,7 +137,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             </div>
 
             <div className="text-right">
-              <div className="inline-block px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-md tracking-wider uppercase mb-1">
+              <div className="inline-block px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-md tracking-wider uppercase mb-1 border border-emerald-300">
                 KUITANSI RESMI
               </div>
               <p className="font-mono text-sm font-bold text-slate-800">{payment.receiptNumber}</p>
@@ -131,7 +146,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           </div>
 
           {/* Receipt Details Grid */}
-          <div className="bg-slate-50 rounded-xl p-5 border border-slate-200/80 space-y-3 text-sm">
+          <div className="bg-slate-50 rounded-xl p-5 border border-slate-200/80 space-y-3 text-sm print:bg-slate-50/80">
             
             <div className="grid grid-cols-3 gap-2">
               <span className="text-slate-500 font-medium">Telah Diterima Dari</span>
@@ -150,7 +165,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
             <div className="grid grid-cols-3 gap-2">
               <span className="text-slate-500 font-medium">Uang Sejumlah</span>
-              <span className="col-span-2 font-bold text-emerald-800 text-base bg-emerald-50 px-3 py-1 rounded border border-emerald-200">
+              <span className="col-span-2 font-bold text-emerald-800 text-base bg-emerald-50 px-3 py-1 rounded border border-emerald-200 inline-block">
                 : {formatIDR(payment.amount)}
               </span>
             </div>
@@ -168,19 +183,19 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             {payment.attachmentUrl && (
               <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-200">
                 <span className="text-slate-500 font-medium flex items-center space-x-1">
-                  <Paperclip className="w-3.5 h-3.5 text-blue-600" />
+                  <Paperclip className="w-3.5 h-3.5 text-blue-600 print:hidden" />
                   <span>Bukti Transfer</span>
                 </span>
                 <span className="col-span-2">
                   <button
                     onClick={() => setIsViewerOpen(true)}
-                    className="inline-flex items-center space-x-1.5 px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded border border-blue-200 transition-colors print:hidden"
+                    className="inline-flex items-center space-x-1.5 px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded border border-blue-200 transition-colors print:hidden cursor-pointer"
                   >
                     <Eye className="w-3.5 h-3.5" />
                     <span>Lihat Bukti Transfer</span>
                   </button>
                   <span className="hidden print:inline text-slate-600 font-mono text-xs">
-                    (Lampiran Tersedia: {payment.attachmentName || 'Bukti_Transfer.pdf'})
+                    (Lampiran Bukti Transfer Tersedia: {payment.attachmentName || 'Bukti_Transfer.pdf'})
                   </span>
                 </span>
               </div>
@@ -213,7 +228,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
           {/* Accounting Disclaimer Banner */}
           <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-[11px] text-blue-900 flex items-start space-x-2">
-            <CheckCircle2 className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-blue-600 mt-0.5 shrink-0 print:hidden" />
             <div>
               <strong>Catatan Akuntansi (PSAK Standards):</strong> Pembayaran ini dicatat sebagai <em>Pendapatan Diterima di Muka (Unearned Revenue / Liabilitas)</em> pada Rekening Penampungan Syariah. Pendapatan resmi travel diakui pada saat Kloter Keberangkatan resmi diterbangkan.
             </div>
@@ -228,7 +243,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             <div>
               <p className="text-slate-500 mb-12">Diterima Oleh (Finance/Kasir),</p>
               <p className="font-bold text-slate-900 underline">{payment.createdBy || 'Kasir Keuangan'}</p>
-              <p className="text-[10px] text-slate-400">ID Jurnal: {payment.journalEntryId}</p>
+              <p className="text-[10px] text-slate-400 font-mono">ID Jurnal: {payment.journalEntryId}</p>
             </div>
           </div>
 
@@ -242,14 +257,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           <div className="flex items-center space-x-3 ml-auto">
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold rounded-lg transition-colors flex items-center space-x-1.5"
+              className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold rounded-lg transition-colors flex items-center space-x-1.5 cursor-pointer"
             >
               <X className="w-4 h-4" />
               <span>Tutup</span>
             </button>
             <button
               onClick={handlePrint}
-              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg flex items-center space-x-2 shadow-sm transition-all"
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg flex items-center space-x-2 shadow-sm transition-all cursor-pointer"
             >
               <Printer className="w-4 h-4" />
               <span>Cetak Kuitansi / Print</span>
@@ -269,4 +284,3 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
     </div>
   );
 };
-

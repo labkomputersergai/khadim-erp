@@ -661,14 +661,34 @@ async function startServer() {
     reg.balanceDue = Math.max(0, newBalanceDue.toNumber());
     reg.status = reg.balanceDue === 0 ? 'PAID_OFF' : 'PARTIAL';
 
-    // 2. Update Installment Schedule if specified
-    if (installmentId) {
-      const sch = scheduleList.find(s => s.id === installmentId);
-      if (sch) {
-        const schPaid = new Decimal(sch.paidAmount).plus(payNum);
-        sch.paidAmount = schPaid.toNumber();
-        sch.status = sch.paidAmount >= sch.amount ? 'PAID' : 'PARTIAL';
+    // 2. Cascade Recalculate Installment Schedules for this Registration
+    const regSchedules = scheduleList
+      .filter(s => s.registrationId === reg.id)
+      .sort((a, b) => a.installmentNumber - b.installmentNumber);
+
+    let remainingPaidPool = reg.paidAmount;
+
+    for (const sch of regSchedules) {
+      if (remainingPaidPool >= sch.amount) {
+        sch.paidAmount = sch.amount;
+        sch.status = 'PAID';
+        remainingPaidPool -= sch.amount;
+      } else if (remainingPaidPool > 0) {
+        sch.paidAmount = remainingPaidPool;
+        sch.status = 'PARTIAL';
+        remainingPaidPool = 0;
+      } else {
+        sch.paidAmount = 0;
+        sch.status = 'PENDING';
       }
+    }
+
+    if (reg.balanceDue === 0) {
+      reg.status = 'PAID_OFF';
+      regSchedules.forEach(sch => {
+        sch.paidAmount = sch.amount;
+        sch.status = 'PAID';
+      });
     }
 
     // 3. Update COA Balances (Asset & Liability)
@@ -746,6 +766,119 @@ async function startServer() {
   // --- JOURNALS & LEDGER ENDPOINTS ---
   app.get('/api/journals', (req, res) => {
     res.json(journalList);
+  });
+
+  // --- NON-JAMAAH CASH RECEIPTS ENDPOINT ---
+  app.post('/api/cash-receipts', (req, res) => {
+    const { receiptDate, category, bankAccountId, amount, notes, createdBy } = req.body;
+
+    if (!receiptDate || !category || !bankAccountId || !amount) {
+      return res.status(400).json({ error: 'Tanggal, Kategori, Rekening Kas/Bank, dan Nominal wajib diisi.' });
+    }
+
+    const payNum = new Decimal(amount || 0);
+    if (payNum.isZero() || payNum.isNegative()) {
+      return res.status(400).json({ error: 'Nominal penerimaan harus lebih besar dari 0.' });
+    }
+
+    const bankCoa = coaList.find(a => a.id === bankAccountId || a.code === bankAccountId);
+    if (!bankCoa) {
+      return res.status(400).json({ error: 'Akun Kas/Bank tujuan tidak ditemukan.' });
+    }
+
+    // Determine Credit Account based on Category
+    let targetCreditCode = '3102';
+    let defaultCreditName = 'Laba Ditahan Periode Lalu';
+    let defaultCategory: 'EQUITY' | 'REVENUE' = 'EQUITY';
+
+    if (category === 'OWNER_CAPITAL') {
+      targetCreditCode = '3101';
+      defaultCreditName = 'Modal Disetor Pemilik';
+      defaultCategory = 'EQUITY';
+    } else if (category === 'NON_OPERATIONAL_INCOME') {
+      targetCreditCode = '8101';
+      defaultCreditName = 'Pendapatan Non-Operasional / Lain-Lain';
+      defaultCategory = 'REVENUE';
+    } else {
+      // RETAINED_EARNINGS
+      targetCreditCode = '3102';
+      defaultCreditName = 'Laba Ditahan Periode Lalu';
+      defaultCategory = 'EQUITY';
+    }
+
+    let creditCoa = coaList.find(a => a.code === targetCreditCode);
+    if (!creditCoa && targetCreditCode === '3102') {
+      creditCoa = coaList.find(a => a.code === '3201');
+    }
+
+    if (!creditCoa) {
+      creditCoa = {
+        id: `coa-${targetCreditCode}`,
+        code: targetCreditCode,
+        name: defaultCreditName,
+        category: defaultCategory,
+        currency: 'IDR',
+        balance: 0,
+        isSystem: true,
+        description: 'Dibuat otomatis oleh sistem'
+      };
+      coaList.push(creditCoa);
+    }
+
+    // 1. Update Balances
+    bankCoa.balance = new Decimal(bankCoa.balance).plus(payNum).toNumber();
+    creditCoa.balance = new Decimal(creditCoa.balance).plus(payNum).toNumber();
+
+    // 2. Generate Journal Entry
+    const jvNum = `JV-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(journalCounter++).padStart(3, '0')}`;
+    const jvId = `jv-rcpt-${Date.now()}`;
+
+    const categoryLabel = 
+      category === 'OWNER_CAPITAL' ? 'Setoran Modal Pemilik' :
+      category === 'NON_OPERATIONAL_INCOME' ? 'Pendapatan Non-Operasional / Lain-Lain' :
+      'Sisa Saldo / Laba Ditahan Tahun Lalu';
+
+    const newJournal: JournalEntry = {
+      id: jvId,
+      journalNumber: jvNum,
+      transactionDate: receiptDate,
+      referenceType: 'NON_JAMAAH_RECEIPT',
+      referenceId: jvNum,
+      description: `Penerimaan Kas Lain-Lain (${categoryLabel}) - ${notes || 'Tanpa Catatan'}`,
+      totalDebit: payNum.toNumber(),
+      totalCredit: payNum.toNumber(),
+      lines: [
+        {
+          id: `jl-${jvId}-1`,
+          journalId: jvId,
+          accountId: bankCoa.id,
+          accountCode: bankCoa.code,
+          accountName: bankCoa.name,
+          debit: payNum.toNumber(),
+          credit: 0,
+          memo: `Debit Kas/Bank (${bankCoa.name})`
+        },
+        {
+          id: `jl-${jvId}-2`,
+          journalId: jvId,
+          accountId: creditCoa.id,
+          accountCode: creditCoa.code,
+          accountName: creditCoa.name,
+          debit: 0,
+          credit: payNum.toNumber(),
+          memo: `Kredit ${creditCoa.code} - ${creditCoa.name}`
+        }
+      ],
+      createdBy: createdBy || 'Kasir / Keuangan',
+      createdAt: new Date().toISOString()
+    };
+
+    journalList.unshift(newJournal);
+
+    res.status(201).json({
+      message: 'Penerimaan Kas Lain-Lain berhasil dicatat & Jurnal Otomatis ter-posting!',
+      journalEntry: newJournal
+    });
   });
 
   // --- VENDORS & BILLS ENDPOINTS ---

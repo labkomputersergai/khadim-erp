@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { JournalEntry, ChartOfAccount, UserRole } from '../types';
 import { getRolePermissions } from '../utils/rbac';
 import { formatIDR } from '../utils/formatters';
+import { NonJamaahReceiptModal } from './NonJamaahReceiptModal';
 import {
   FileCheck,
   BookOpen,
@@ -12,20 +13,29 @@ import {
   ArrowRightLeft,
   ChevronDown,
   Building2,
-  Lock
+  Lock,
+  Landmark,
+  PlusCircle
 } from 'lucide-react';
 
 interface JournalLedgerViewProps {
   journals: JournalEntry[];
   coaList: ChartOfAccount[];
   userRole?: UserRole;
+  onRefreshData?: () => Promise<void> | void;
 }
 
-export const JournalLedgerView: React.FC<JournalLedgerViewProps> = ({ journals, coaList, userRole = 'ACCOUNTANT' }) => {
+export const JournalLedgerView: React.FC<JournalLedgerViewProps> = ({
+  journals,
+  coaList,
+  userRole = 'ACCOUNTANT',
+  onRefreshData
+}) => {
   const perm = getRolePermissions(userRole);
   const [activeTab, setActiveTab] = useState<'JOURNAL' | 'LEDGER'>('JOURNAL');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCoaId, setSelectedCoaId] = useState<string>(coaList[1]?.id || '');
+  const [isNonJamaahModalOpen, setIsNonJamaahModalOpen] = useState(false);
 
   // Filter Journals
   const filteredJournals = journals.filter(
@@ -104,15 +114,27 @@ export const JournalLedgerView: React.FC<JournalLedgerViewProps> = ({ journals, 
         <div className="bg-white dark:bg-slate-900 rounded-sm border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 p-3.5 sm:p-5 min-w-0 w-full">
           
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-4 border-b border-slate-200 dark:border-slate-800">
-            <div className="relative w-full sm:w-72">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-              <input
-                type="text"
-                placeholder="Cari No. Jurnal / Keterangan..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-sm text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-              />
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+              <div className="relative w-full sm:w-72">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  placeholder="Cari No. Jurnal / Keterangan..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-sm text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+
+              {perm.canReceivePayment && (
+                <button
+                  onClick={() => setIsNonJamaahModalOpen(true)}
+                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-sm shadow-sm transition-all flex items-center justify-center space-x-1.5 shrink-0"
+                >
+                  <Landmark className="w-4 h-4" />
+                  <span>+ Penerimaan Kas Non-Jamaah</span>
+                </button>
+              )}
             </div>
 
             <div className="flex items-center space-x-2 text-xs text-slate-500 shrink-0">
@@ -245,6 +267,15 @@ export const JournalLedgerView: React.FC<JournalLedgerViewProps> = ({ journals, 
 
         </div>
       )}
+
+      {/* Modal Penerimaan Kas Non-Jamaah */}
+      <NonJamaahReceiptModal
+        isOpen={isNonJamaahModalOpen}
+        onClose={() => setIsNonJamaahModalOpen(false)}
+        coaList={coaList}
+        onRefreshData={onRefreshData || (() => {})}
+        userRole={userRole}
+      />
 
     </div>
   );

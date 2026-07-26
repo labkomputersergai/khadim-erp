@@ -14,12 +14,14 @@ export const INITIAL_COA: ChartOfAccount[] = [
 
   // Equity
   { id: 'coa-3101', code: '3101', name: 'Modal Disetor Pemilik', category: 'EQUITY', currency: 'IDR', balance: 200000000, isSystem: true, description: 'Modal awal pendirian PT Travel' },
+  { id: 'coa-3102', code: '3102', name: 'Laba Ditahan Periode Lalu', category: 'EQUITY', currency: 'IDR', balance: 0, isSystem: true, description: 'Sisa saldo / laba ditahan akumulasi periode lalu' },
   { id: 'coa-3201', code: '3201', name: 'Laba Ditahan', category: 'EQUITY', currency: 'IDR', balance: 75000000, isSystem: true, description: 'Akumulasi laba periode sebelumnya' },
 
   // Revenue
   { id: 'coa-4101', code: '4101', name: 'Pendapatan Paket Umrah', category: 'REVENUE', currency: 'IDR', balance: 570000000, isSystem: true, description: 'Diakui saat Kloter Umrah resmi berangkat' },
   { id: 'coa-4102', code: '4102', name: 'Pendapatan Paket Haji Plus', category: 'REVENUE', currency: 'IDR', balance: 0, isSystem: true, description: 'Diakui saat Kloter Haji berangkat' },
   { id: 'coa-4103', code: '4103', name: 'Pendapatan Visa & Handling Add-on', category: 'REVENUE', currency: 'IDR', balance: 12500000, isSystem: true, description: 'Pendapatan sampingan pembuatan visa / upgrade kamar' },
+  { id: 'coa-8101', code: '8101', name: 'Pendapatan Non-Operasional / Lain-Lain', category: 'REVENUE', currency: 'IDR', balance: 0, isSystem: true, description: 'Pendapatan non-operasional / diluar paket jamaah' },
 
   // COGS (HPP)
   { id: 'coa-5101', code: '5101', name: 'HPP - Tiket Pesawat Maskapai', category: 'COGS', currency: 'IDR', balance: 180000000, isSystem: true, description: 'Beli tiket Saudi / Saudia / Lion / Garuda' },
@@ -306,6 +308,8 @@ export const INITIAL_PAYMENTS: JamaahPaymentTransaction[] = [
     currency: 'IDR',
     exchangeRate: 1,
     notes: 'DP Booking Fee Umrah Reguler 9 Hari',
+    attachmentUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=800&q=80',
+    attachmentName: 'Bukti_Transfer_BSI_KW001.jpg',
     createdBy: 'Kasir Finance',
     journalEntryId: 'jv-01'
   },
@@ -321,6 +325,8 @@ export const INITIAL_PAYMENTS: JamaahPaymentTransaction[] = [
     currency: 'IDR',
     exchangeRate: 1,
     notes: 'Cicilan ke-1 BSI Transfer',
+    attachmentUrl: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=800&q=80',
+    attachmentName: 'Bukti_Transfer_Cicilan1_KW002.jpg',
     createdBy: 'Kasir Finance',
     journalEntryId: 'jv-02'
   },
@@ -336,6 +342,8 @@ export const INITIAL_PAYMENTS: JamaahPaymentTransaction[] = [
     currency: 'IDR',
     exchangeRate: 1,
     notes: 'DP Booking Fee Hj. Siti',
+    attachmentUrl: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=800&q=80',
+    attachmentName: 'Bukti_DP_HjSiti_KW003.jpg',
     createdBy: 'Kasir Finance',
     journalEntryId: 'jv-03'
   },
@@ -351,6 +359,8 @@ export const INITIAL_PAYMENTS: JamaahPaymentTransaction[] = [
     currency: 'IDR',
     exchangeRate: 1,
     notes: 'Pelunasan Paket Umrah Syawal Alpha',
+    attachmentUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=800&q=80',
+    attachmentName: 'Bukti_Pelunasan_KW004.jpg',
     createdBy: 'Kasir Finance',
     journalEntryId: 'jv-04'
   },
@@ -366,6 +376,8 @@ export const INITIAL_PAYMENTS: JamaahPaymentTransaction[] = [
     currency: 'IDR',
     exchangeRate: 1,
     notes: 'DP Cash Kasir Kantor',
+    attachmentUrl: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=800&q=80',
+    attachmentName: 'Kwitansi_Kasir_KW005.jpg',
     createdBy: 'Kasir Finance',
     journalEntryId: 'jv-05'
   }
@@ -473,6 +485,8 @@ export const INITIAL_VENDOR_BILLS: VendorBill[] = [
     paidAmount: 50000000,
     status: 'PARTIAL',
     description: 'Deposit Tiket SV 10 Seat Kloter Syawal Alpha',
+    attachmentUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=800&q=80',
+    attachmentName: 'Invoice_Saudia_INV_SV_01.jpg',
     journalEntryId: 'jv-vb-01'
   }
 ];
@@ -487,6 +501,8 @@ export const INITIAL_VENDOR_PAYMENTS: VendorPayment[] = [
     bankAccountId: 'coa-1102',
     referenceNo: 'TRX-BSI-991200',
     notes: 'DP 40% Deposit Tiket SV Kloter Syawal Alpha',
+    attachmentUrl: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=800&q=80',
+    attachmentName: 'Bukti_Bayar_Saudia_BSI.jpg',
     journalEntryId: 'jv-vp-01'
   }
 ];

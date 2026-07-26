@@ -14,7 +14,8 @@ import {
   PlusCircle,
   FileCheck,
   CheckCircle2,
-  Users
+  Users,
+  Landmark
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, PieChart, Pie, Cell } from 'recharts';
 
@@ -27,6 +28,7 @@ interface DashboardViewProps {
   onNavigateTab: (tab: string) => void;
   onOpenNewPayment: () => void;
   onOpenNewRegistration: () => void;
+  onOpenNonJamaahReceipt?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -37,7 +39,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   userRole,
   onNavigateTab,
   onOpenNewPayment,
-  onOpenNewRegistration
+  onOpenNewRegistration,
+  onOpenNonJamaahReceipt
 }) => {
   const perm = getRolePermissions(userRole);
 
@@ -80,13 +83,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     <div className="space-y-6">
       
       {/* Top Banner Alert for PSAK Unearned Revenue Accounting Principle */}
-      <div className="bg-[#0F172A] border border-slate-800 rounded-sm p-5 shadow-sm text-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-start space-x-3">
-          <div className="p-2 bg-blue-600 text-white rounded-sm shrink-0">
-            <CheckCircle2 className="w-5 h-5" />
+      <div className="bg-[#0F172A] border border-slate-800 rounded-md p-5 sm:p-6 shadow-sm text-slate-200 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+        <div className="flex items-start space-x-3.5 max-w-3xl">
+          <div className="p-2.5 bg-blue-600/30 text-blue-400 rounded-lg border border-blue-500/30 shrink-0 mt-0.5">
+            <CheckCircle2 className="w-5 h-5 text-blue-400" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-white flex items-center space-x-2">
+            <h2 className="text-sm font-bold text-white flex flex-wrap items-center gap-2">
               <span>Sistem Akuntansi Berpasangan (Double-Entry) Travel Umrah</span>
               <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold uppercase tracking-wider px-2 py-0.5 rounded-sm border border-emerald-500/40">
                 PSAK Compliant
@@ -98,28 +101,40 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="flex items-center space-x-2 shrink-0">
+        {/* Quick Actions Container */}
+        <div className="flex flex-wrap sm:flex-nowrap lg:flex-wrap xl:flex-nowrap items-center gap-2.5 w-full lg:w-auto shrink-0 border-t lg:border-t-0 border-slate-800/80 pt-4 lg:pt-0">
           {perm.canRegisterJamaah && (
             <button
               onClick={onOpenNewRegistration}
-              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-sm shadow-sm transition-all flex items-center space-x-1.5"
+              className="w-full sm:w-auto px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-sm transition-all flex items-center justify-center space-x-1.5 whitespace-nowrap active:scale-[0.98]"
             >
-              <PlusCircle className="w-4 h-4" />
+              <PlusCircle className="w-4 h-4 shrink-0" />
               <span>+ Daftar Jamaah</span>
             </button>
           )}
 
           {perm.canReceivePayment ? (
-            <button
-              onClick={onOpenNewPayment}
-              className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-sm shadow-sm transition-all flex items-center space-x-1.5"
-            >
-              <Receipt className="w-4 h-4" />
-              <span>+ Terima Pembayaran</span>
-            </button>
+            <>
+              <button
+                onClick={onOpenNewPayment}
+                className="w-full sm:w-auto px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg shadow-sm transition-all flex items-center justify-center space-x-1.5 whitespace-nowrap active:scale-[0.98]"
+              >
+                <Receipt className="w-4 h-4 shrink-0" />
+                <span>+ Terima Pembayaran Jamaah</span>
+              </button>
+
+              {onOpenNonJamaahReceipt && (
+                <button
+                  onClick={onOpenNonJamaahReceipt}
+                  className="w-full sm:w-auto px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-lg shadow-sm transition-all flex items-center justify-center space-x-1.5 whitespace-nowrap active:scale-[0.98]"
+                >
+                  <Landmark className="w-4 h-4 shrink-0" />
+                  <span>+ Kas Non-Jamaah</span>
+                </button>
+              )}
+            </>
           ) : userRole === 'ADMIN_CS' ? (
-            <div className="px-3 py-1.5 bg-slate-800/60 border border-slate-700 text-slate-400 text-[11px] rounded-sm cursor-not-allowed flex items-center space-x-1" title="Akses Kasir & Keuangan Only">
+            <div className="w-full sm:w-auto px-3.5 py-2 bg-slate-800/80 border border-slate-700 text-slate-400 text-[11px] rounded-lg cursor-not-allowed flex items-center justify-center space-x-1 whitespace-nowrap" title="Akses Kasir & Keuangan Only">
               <span>Kasir: Terima Uang</span>
             </div>
           ) : null}

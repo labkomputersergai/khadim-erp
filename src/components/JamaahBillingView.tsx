@@ -101,6 +101,39 @@ export const JamaahBillingView: React.FC<JamaahBillingViewProps> = ({
     }
   };
 
+  // Handler for Interactive Schedule Cards
+  const handleScheduleClick = (sch: PaymentSchedule) => {
+    if (!selectedReg) return;
+    const jam = jamaahList.find(j => j.id === selectedReg.jamaahId);
+    const payments = selectedReg.payments || [];
+
+    if (sch.status === 'PAID') {
+      // Find matching payment transaction for this installment
+      const matchedPayment = payments.find(p => p.installmentId === sch.id) || payments[0];
+      if (matchedPayment) {
+        setPrintedPayment(matchedPayment);
+      } else {
+        alert(`Cicilan "${sch.title}" untuk ${jam?.fullName || 'Jamaah'} sudah LUNAS.`);
+      }
+    } else {
+      // Calculate unpaid amount for this schedule card
+      const unallocated = sch.amount - (sch.paidAmount || 0);
+      const targetAmount = Math.max(0, unallocated);
+
+      setPaymentRegId(selectedReg.id);
+      setPaymentInstallmentId(sch.id);
+      setPaymentAmount(targetAmount > 0 ? targetAmount.toString() : sch.amount.toString());
+      setPaymentNotes(`Pembayaran ${sch.title} - ${jam?.fullName || 'Jamaah'}`);
+
+      // Set default bank if not selected yet
+      if (!paymentBankId && bankAccounts.length > 0) {
+        setPaymentBankId(bankAccounts[0].id);
+      }
+
+      setIsNewPaymentOpen(true);
+    }
+  };
+
   // Form States for New Registration
   const [regJamaahType, setRegJamaahType] = useState<'NEW' | 'EXISTING'>('NEW');
   const [selectedJamaahId, setSelectedJamaahId] = useState<string>('');
@@ -478,35 +511,78 @@ export const JamaahBillingView: React.FC<JamaahBillingViewProps> = ({
 
                   {/* Installments Schedule Section */}
                   <div className="space-y-3">
-                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-                      Jadwal Cicilan (Schedule)
-                    </h4>
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                        Jadwal Cicilan (Schedule)
+                      </h4>
+                      <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium cursor-pointer">
+                        Klik kartu untuk bayar
+                      </span>
+                    </div>
+
                     <div className="space-y-2">
-                      {schedules.map((sch) => (
-                        <div
-                          key={sch.id}
-                          className={`p-3 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-sm flex items-center justify-between text-xs ${
-                            sch.status === 'PAID' ? 'border-l-2 border-l-emerald-500' : 'border-l-2 border-l-orange-500'
-                          }`}
-                        >
-                          <div>
-                            <div className="font-bold text-slate-900 dark:text-slate-100">{sch.title}</div>
-                            <div className="text-[10px] text-slate-400">Jatuh Tempo: {sch.dueDate}</div>
+                      {schedules.map((sch) => {
+                        const isPaid = sch.status === 'PAID';
+                        const isPartial = sch.status === 'PARTIAL';
+                        const isOverdue = sch.status === 'OVERDUE';
+
+                        return (
+                          <div
+                            key={sch.id}
+                            onClick={() => handleScheduleClick(sch)}
+                            className={`p-3 rounded-md border transition-all cursor-pointer flex items-center justify-between text-xs hover:shadow-md ${
+                              isPaid
+                                ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800/80 hover:border-emerald-500'
+                                : isPartial
+                                ? 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-300 dark:border-blue-800/80 hover:border-blue-500'
+                                : isOverdue
+                                ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-300 dark:border-rose-800/80 hover:border-rose-500'
+                                : 'bg-amber-50/40 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/80 hover:border-amber-500'
+                            }`}
+                          >
+                            <div className="space-y-0.5">
+                              <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center space-x-1.5">
+                                <span>{sch.title}</span>
+                                {isPaid ? (
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                ) : isPartial ? (
+                                  <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                                ) : (
+                                  <AlertCircle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                                )}
+                              </div>
+                              <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                                Jatuh Tempo: {formatDateIndo(sch.dueDate)}
+                              </div>
+                            </div>
+
+                            <div className="text-right space-y-1">
+                              <div className="font-mono font-bold text-slate-900 dark:text-slate-100">
+                                {formatIDR(sch.amount)}
+                              </div>
+                              <div className="flex items-center justify-end">
+                                <span
+                                  className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                                    isPaid
+                                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
+                                      : isPartial
+                                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300'
+                                      : isOverdue
+                                      ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-300'
+                                      : 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300'
+                                  }`}
+                                >
+                                  {isPaid
+                                    ? 'LUNAS (Lihat Bukti)'
+                                    : isPartial
+                                    ? `Terbayar ${formatIDR(sch.paidAmount)} (Klik Bayar)`
+                                    : 'PENDING (Klik Bayar)'}
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <div className="font-mono font-bold text-slate-900 dark:text-slate-100">{formatIDR(sch.amount)}</div>
-                            <span
-                              className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-sm ${
-                                sch.status === 'PAID'
-                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300'
-                                  : 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
-                              }`}
-                            >
-                              {sch.status === 'PAID' ? 'LUNAS' : 'PENDING'}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -624,6 +700,40 @@ export const JamaahBillingView: React.FC<JamaahBillingViewProps> = ({
                   {paymentError}
                 </div>
               )}
+
+              {/* Contextual Schedule / Jamaah Banner */}
+              {paymentRegId && (() => {
+                const activeR = registrations.find(r => r.id === paymentRegId);
+                const activeJ = jamaahList.find(j => j.id === activeR?.jamaahId);
+                const activeSch = activeR?.schedules?.find(s => s.id === paymentInstallmentId);
+
+                if (!activeR) return null;
+
+                return (
+                  <div className="p-3 bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 rounded-md space-y-1.5 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-blue-900 dark:text-blue-300">
+                        {activeJ?.fullName || 'Jamaah'}
+                      </span>
+                      <span className="font-mono text-[11px] text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/60 px-2 py-0.5 rounded">
+                        {activeR.registrationNumber}
+                      </span>
+                    </div>
+
+                    {activeSch ? (
+                      <div className="flex justify-between items-center text-slate-700 dark:text-slate-300 pt-1 border-t border-blue-200/60 dark:border-blue-900/60">
+                        <span>Target: <strong className="text-blue-800 dark:text-blue-300">{activeSch.title}</strong></span>
+                        <span>Nominal Jatuh Tempo: <strong className="text-emerald-700 dark:text-emerald-400 font-mono">{formatIDR(activeSch.amount - (activeSch.paidAmount || 0))}</strong></span>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-center text-slate-700 dark:text-slate-300 pt-1 border-t border-blue-200/60 dark:border-blue-900/60">
+                        <span>Sisa Total Piutang:</span>
+                        <strong className="text-amber-700 dark:text-amber-400 font-mono">{formatIDR(activeR.balanceDue)}</strong>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Select Registration */}
               <div>

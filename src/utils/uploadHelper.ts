@@ -1,6 +1,7 @@
 /**
- * Utility helper for uploading receipt documents (images / PDFs) to Cloud Storage
- * Returns the public URL string instead of converting files to raw Base64.
+ * Utility helper for uploading receipt documents (images / PDFs)
+ * Converts uploaded file into a Data URL (Base64) or Object URL so it can be previewed
+ * and downloaded natively in the browser without 404 / GCS NoSuchKey errors.
  */
 
 export interface UploadResult {
@@ -9,52 +10,49 @@ export interface UploadResult {
 }
 
 /**
- * Uploads a payment receipt file (image/PDF) to the backend or Cloud Storage service.
+ * Reads a File object and converts it to a browser-compatible Data URL string.
  * @param file The File object selected by user in file input
- * @param folder Target folder name in cloud bucket (e.g. 'receipts')
+ * @param _folder Target folder parameter (preserved for interface signature)
  * @returns Promise resolving to { fileUrl, fileName }
  */
 export async function uploadReceiptFile(
   file: File,
-  folder: string = 'receipts'
+  _folder: string = 'receipts'
 ): Promise<UploadResult> {
   // Validate file size (max 10MB)
   if (file.size > 10 * 1024 * 1024) {
     throw new Error('Ukuran berkas terlalu besar! Batas maksimal adalah 10MB.');
   }
 
-  // Create Form Data for Multipart Upload
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('folder', folder);
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
 
-  try {
-    const response = await fetch('/api/upload', {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      if (data.fileUrl) {
-        return {
-          fileUrl: data.fileUrl,
-          fileName: data.fileName || file.name,
-        };
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        resolve({
+          fileUrl: reader.result,
+          fileName: file.name
+        });
+      } else {
+        reject(new Error('Gagal membaca berkas unggahan.'));
       }
-    }
-  } catch (err) {
-    console.warn('Backend upload API endpoint call failed, applying fallback Cloud Storage URL handler:', err);
-  }
+    };
 
-  // Fallback / Standalone Cloud Storage URL generator
-  // Formats URL as: https://storage.googleapis.com/khadim-erp-bucket/receipts/kw-[timestamp]-[sanitizedFilename]
-  const sanitizeName = file.name.toLowerCase().replace(/[^a-z0-9.-]/g, '_');
-  const timestamp = Date.now();
-  const cloudStorageUrl = `https://storage.googleapis.com/khadim-erp-bucket/${folder}/kw-${timestamp}-${sanitizeName}`;
+    reader.onerror = () => {
+      reject(new Error('Terjadi kesalahan saat membaca berkas di browser.'));
+    };
 
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Alternative helper to generate a temporary Object URL for immediate local preview
+ */
+export function createLocalObjectUrl(file: File): { fileUrl: string; fileName: string } {
+  const objectUrl = URL.createObjectURL(file);
   return {
-    fileUrl: cloudStorageUrl,
-    fileName: file.name,
+    fileUrl: objectUrl,
+    fileName: file.name
   };
 }

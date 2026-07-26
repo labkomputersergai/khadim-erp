@@ -171,7 +171,7 @@ export interface JournalEntry {
   id: string;
   journalNumber: string; // e.g. JV-202607-0001
   transactionDate: string;
-  referenceType: 'JAMAAH_PAYMENT' | 'REVENUE_RECOGNITION' | 'VENDOR_BILL' | 'VENDOR_PAYMENT' | 'MITRA_COMMISSION' | 'MANUAL_JOURNAL';
+  referenceType: 'JAMAAH_PAYMENT' | 'REVENUE_RECOGNITION' | 'VENDOR_BILL' | 'VENDOR_PAYMENT' | 'MITRA_COMMISSION' | 'MANUAL_JOURNAL' | 'NON_JAMAAH_RECEIPT';
   referenceId?: string;
   description: string;
   totalDebit: number;
