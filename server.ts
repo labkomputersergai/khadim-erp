@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import Decimal from 'decimal.js';
 import {
@@ -35,7 +36,7 @@ import {
   MitraCommission
 } from './src/types';
 
-// In-Memory Database Store for ERP State
+// Persistent Database Store for ERP State
 let coaList: ChartOfAccount[] = [...INITIAL_COA];
 let packageList: TravelPackage[] = [...INITIAL_PACKAGES];
 let kloterList: DepartureKloter[] = [...INITIAL_KLOTERS];
@@ -54,6 +55,74 @@ let journalCounter = journalList.length + 1;
 let receiptCounter = paymentList.length + 1;
 let regCounter = registrationList.length + 1;
 let commissionCounter = commissionList.length + 1;
+
+const DB_FILE_PATH = path.join(process.cwd(), 'data', 'database.json');
+
+function saveDatabaseToDisk() {
+  try {
+    const dir = path.dirname(DB_FILE_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    const data = {
+      coaList,
+      packageList,
+      kloterList,
+      jamaahList,
+      registrationList,
+      scheduleList,
+      paymentList,
+      journalList,
+      vendorList,
+      vendorBillList,
+      vendorPaymentList,
+      mitraList,
+      commissionList,
+      journalCounter,
+      receiptCounter,
+      regCounter,
+      commissionCounter
+    };
+    fs.writeFileSync(DB_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Failed to save database to disk:', err);
+  }
+}
+
+function loadDatabaseFromDisk() {
+  try {
+    if (fs.existsSync(DB_FILE_PATH)) {
+      const fileData = fs.readFileSync(DB_FILE_PATH, 'utf-8');
+      const parsed = JSON.parse(fileData);
+      if (parsed.coaList) coaList = parsed.coaList;
+      if (parsed.packageList) packageList = parsed.packageList;
+      if (parsed.kloterList) kloterList = parsed.kloterList;
+      if (parsed.jamaahList) jamaahList = parsed.jamaahList;
+      if (parsed.registrationList) registrationList = parsed.registrationList;
+      if (parsed.scheduleList) scheduleList = parsed.scheduleList;
+      if (parsed.paymentList) paymentList = parsed.paymentList;
+      if (parsed.journalList) journalList = parsed.journalList;
+      if (parsed.vendorList) vendorList = parsed.vendorList;
+      if (parsed.vendorBillList) vendorBillList = parsed.vendorBillList;
+      if (parsed.vendorPaymentList) vendorPaymentList = parsed.vendorPaymentList;
+      if (parsed.mitraList) mitraList = parsed.mitraList;
+      if (parsed.commissionList) commissionList = parsed.commissionList;
+      if (parsed.journalCounter !== undefined) journalCounter = parsed.journalCounter;
+      if (parsed.receiptCounter !== undefined) receiptCounter = parsed.receiptCounter;
+      if (parsed.regCounter !== undefined) regCounter = parsed.regCounter;
+      if (parsed.commissionCounter !== undefined) commissionCounter = parsed.commissionCounter;
+
+      console.log('Loaded persistent database from:', DB_FILE_PATH);
+      return;
+    }
+  } catch (err) {
+    console.error('Error loading persistent database file:', err);
+  }
+
+  saveDatabaseToDisk();
+}
+
+loadDatabaseFromDisk();
 
 async function startServer() {
   const app = express();
@@ -111,7 +180,29 @@ async function startServer() {
       description: description || ''
     };
     coaList.push(newCoa);
+    saveDatabaseToDisk();
     res.status(201).json(newCoa);
+  });
+
+  app.put('/api/coa/:id', (req, res) => {
+    const { id } = req.params;
+    const coaIdx = coaList.findIndex(a => a.id === id || a.code === id);
+    if (coaIdx === -1) {
+      return res.status(404).json({ error: 'Akun COA tidak ditemukan.' });
+    }
+
+    const { code, name, category, currency, description } = req.body;
+    coaList[coaIdx] = {
+      ...coaList[coaIdx],
+      code: code !== undefined ? code : coaList[coaIdx].code,
+      name: name !== undefined ? name : coaList[coaIdx].name,
+      category: category !== undefined ? category : coaList[coaIdx].category,
+      currency: currency !== undefined ? currency : coaList[coaIdx].currency,
+      description: description !== undefined ? description : coaList[coaIdx].description
+    };
+
+    saveDatabaseToDisk();
+    res.json(coaList[coaIdx]);
   });
 
   // --- PACKAGES & KLOTERS ENDPOINTS ---
@@ -145,6 +236,7 @@ async function startServer() {
       isActive: isActive !== undefined ? Boolean(isActive) : true
     };
     packageList.push(newPkg);
+    saveDatabaseToDisk();
     res.status(201).json(newPkg);
   });
 
@@ -181,6 +273,7 @@ async function startServer() {
       isActive: isActive !== undefined ? Boolean(isActive) : packageList[pkgIndex].isActive
     };
 
+    saveDatabaseToDisk();
     res.json(packageList[pkgIndex]);
   });
 
@@ -191,6 +284,7 @@ async function startServer() {
       return res.status(404).json({ error: 'Paket tidak ditemukan.' });
     }
     pkg.isActive = !pkg.isActive;
+    saveDatabaseToDisk();
     res.json(pkg);
   });
 
@@ -206,6 +300,7 @@ async function startServer() {
     }
 
     packageList = packageList.filter(p => p.id !== id);
+    saveDatabaseToDisk();
     res.json({ message: 'Paket berhasil dihapus.' });
   });
 
@@ -242,6 +337,7 @@ async function startServer() {
       notes: notes || ''
     };
     kloterList.push(newKloter);
+    saveDatabaseToDisk();
     res.status(201).json(newKloter);
   });
 
@@ -339,6 +435,7 @@ async function startServer() {
     };
 
     journalList.unshift(newJournal);
+    saveDatabaseToDisk();
 
     res.json({
       message: 'Pengakuan Pendapatan berhasil di-posting ke Jurnal Umum!',
@@ -372,7 +469,46 @@ async function startServer() {
       emergencyContact: emergencyContact || { name: '-', relation: '-', phone: '-' }
     };
     jamaahList.push(newJamaah);
+    saveDatabaseToDisk();
     res.status(201).json(newJamaah);
+  });
+
+  app.put('/api/jamaah/:id', (req, res) => {
+    const { id } = req.params;
+    const jamIdx = jamaahList.findIndex(j => j.id === id);
+    if (jamIdx === -1) {
+      return res.status(404).json({ error: 'Data Jamaah tidak ditemukan.' });
+    }
+
+    const { nik, fullName, passportNumber, passportExpiry, phone, email, address, gender, birthDate, emergencyContact } = req.body;
+    jamaahList[jamIdx] = {
+      ...jamaahList[jamIdx],
+      nik: nik !== undefined ? nik : jamaahList[jamIdx].nik,
+      fullName: fullName !== undefined ? fullName : jamaahList[jamIdx].fullName,
+      passportNumber: passportNumber !== undefined ? passportNumber : jamaahList[jamIdx].passportNumber,
+      passportExpiry: passportExpiry !== undefined ? passportExpiry : jamaahList[jamIdx].passportExpiry,
+      phone: phone !== undefined ? phone : jamaahList[jamIdx].phone,
+      email: email !== undefined ? email : jamaahList[jamIdx].email,
+      address: address !== undefined ? address : jamaahList[jamIdx].address,
+      gender: gender !== undefined ? gender : jamaahList[jamIdx].gender,
+      birthDate: birthDate !== undefined ? birthDate : jamaahList[jamIdx].birthDate,
+      emergencyContact: emergencyContact !== undefined ? emergencyContact : jamaahList[jamIdx].emergencyContact
+    };
+
+    saveDatabaseToDisk();
+    res.json(jamaahList[jamIdx]);
+  });
+
+  app.delete('/api/jamaah/:id', (req, res) => {
+    const { id } = req.params;
+    const isRegistered = registrationList.some(r => r.jamaahId === id);
+    if (isRegistered) {
+      return res.status(400).json({ error: 'Jamaah tidak dapat dihapus karena sudah memiliki riwayat pendaftaran paket.' });
+    }
+
+    jamaahList = jamaahList.filter(j => j.id !== id);
+    saveDatabaseToDisk();
+    res.json({ message: 'Data Jamaah berhasil dihapus.' });
   });
 
   app.get('/api/registrations', (req, res) => {
@@ -528,6 +664,7 @@ async function startServer() {
     }
 
     scheduleList.push(...schedulesToCreate);
+    saveDatabaseToDisk();
 
     res.status(201).json({
       registration: newReg,
@@ -611,6 +748,8 @@ async function startServer() {
         lastUnpaid.amount = Math.max(0, lastUnpaid.amount + priceDiff.toNumber());
       }
     }
+
+    saveDatabaseToDisk();
 
     res.json({
       message: 'Mutasi Paket & Kloter Jamaah berhasil diproses!',
@@ -754,6 +893,7 @@ async function startServer() {
     };
 
     paymentList.unshift(newPayment);
+    saveDatabaseToDisk();
 
     res.status(201).json({
       message: 'Pembayaran berhasil dicatat & Jurnal Otomatis berhasil ter-posting!',
@@ -766,6 +906,73 @@ async function startServer() {
   // --- JOURNALS & LEDGER ENDPOINTS ---
   app.get('/api/journals', (req, res) => {
     res.json(journalList);
+  });
+
+  app.post('/api/journals', (req, res) => {
+    const { transactionDate, referenceType, referenceId, description, lines, createdBy } = req.body;
+
+    if (!description || !lines || !Array.isArray(lines) || lines.length < 2) {
+      return res.status(400).json({ error: 'Deskripsi dan minimal 2 baris jurnal (Debit & Kredit) wajib diisi.' });
+    }
+
+    let totalDebit = new Decimal(0);
+    let totalCredit = new Decimal(0);
+
+    lines.forEach((l: any) => {
+      totalDebit = totalDebit.plus(l.debit || 0);
+      totalCredit = totalCredit.plus(l.credit || 0);
+    });
+
+    if (!totalDebit.equals(totalCredit)) {
+      return res.status(400).json({ error: `Jurnal tidak seimbang! Total Debit (Rp ${totalDebit.toNumber().toLocaleString('id-ID')}) != Total Kredit (Rp ${totalCredit.toNumber().toLocaleString('id-ID')}).` });
+    }
+
+    const jvNum = `JV-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(journalCounter++).padStart(3, '0')}`;
+    const jvId = `jv-manual-${Date.now()}`;
+
+    // Update COA balances
+    lines.forEach((l: any) => {
+      const coa = coaList.find(a => a.id === l.accountId || a.code === l.accountCode);
+      if (coa) {
+        if (['ASSET', 'EXPENSE', 'COGS'].includes(coa.category)) {
+          coa.balance = new Decimal(coa.balance).plus(l.debit || 0).minus(l.credit || 0).toNumber();
+        } else {
+          coa.balance = new Decimal(coa.balance).plus(l.credit || 0).minus(l.debit || 0).toNumber();
+        }
+      }
+    });
+
+    const newJournal: JournalEntry = {
+      id: jvId,
+      journalNumber: jvNum,
+      transactionDate: transactionDate || new Date().toISOString().split('T')[0],
+      referenceType: referenceType || 'MANUAL_JOURNAL',
+      referenceId: referenceId || jvNum,
+      description,
+      totalDebit: totalDebit.toNumber(),
+      totalCredit: totalCredit.toNumber(),
+      lines: lines.map((l: any, idx: number) => ({
+        id: `jl-${jvId}-${idx + 1}`,
+        journalId: jvId,
+        accountId: l.accountId,
+        accountCode: l.accountCode,
+        accountName: l.accountName,
+        debit: Number(l.debit) || 0,
+        credit: Number(l.credit) || 0,
+        memo: l.memo || description,
+        kloterId: l.kloterId
+      })),
+      createdBy: createdBy || 'Senior Accountant',
+      createdAt: new Date().toISOString()
+    };
+
+    journalList.unshift(newJournal);
+    saveDatabaseToDisk();
+
+    res.status(201).json({
+      message: 'Jurnal Manual berhasil ter-posting dan saldo COA telah diperbarui!',
+      journalEntry: newJournal
+    });
   });
 
   // --- NON-JAMAAH CASH RECEIPTS ENDPOINT ---
@@ -874,6 +1081,7 @@ async function startServer() {
     };
 
     journalList.unshift(newJournal);
+    saveDatabaseToDisk();
 
     res.status(201).json({
       message: 'Penerimaan Kas Lain-Lain berhasil dicatat & Jurnal Otomatis ter-posting!',
@@ -903,6 +1111,7 @@ async function startServer() {
       isActive: isActive !== undefined ? Boolean(isActive) : true,
     };
     vendorList.push(newVendor);
+    saveDatabaseToDisk();
     res.status(201).json(newVendor);
   });
 
@@ -931,6 +1140,7 @@ async function startServer() {
       isActive: isActive !== undefined ? Boolean(isActive) : vendorList[vIdx].isActive
     };
 
+    saveDatabaseToDisk();
     res.json(vendorList[vIdx]);
   });
 
@@ -941,6 +1151,7 @@ async function startServer() {
       return res.status(404).json({ error: 'Vendor tidak ditemukan.' });
     }
     vendorList[vIdx].isActive = !vendorList[vIdx].isActive;
+    saveDatabaseToDisk();
     res.json(vendorList[vIdx]);
   });
 
@@ -951,6 +1162,7 @@ async function startServer() {
       return res.status(400).json({ error: 'Vendor tidak dapat dihapus karena sudah memiliki tagihan.' });
     }
     vendorList = vendorList.filter(v => v.id !== id);
+    saveDatabaseToDisk();
     res.json({ message: 'Vendor berhasil dihapus.' });
   });
 
@@ -1012,6 +1224,7 @@ async function startServer() {
     };
 
     vendorBillList.unshift(newBill);
+    saveDatabaseToDisk();
 
     res.status(201).json({ bill: newBill, journalEntry: newJournal });
   });
@@ -1099,6 +1312,7 @@ async function startServer() {
     };
 
     vendorPaymentList.unshift(newPayment);
+    saveDatabaseToDisk();
 
     res.status(201).json({
       message: 'Pembayaran tagihan vendor berhasil dicatat & Jurnal Otomatis ter-posting!',
@@ -1269,6 +1483,7 @@ async function startServer() {
       notes: notes || ''
     };
     mitraList.push(newMitra);
+    saveDatabaseToDisk();
     res.status(201).json(newMitra);
   });
 
@@ -1289,6 +1504,7 @@ async function startServer() {
     if (isActive !== undefined) m.isActive = Boolean(isActive);
     if (notes !== undefined) m.notes = notes;
 
+    saveDatabaseToDisk();
     res.json(m);
   });
 
@@ -1299,6 +1515,7 @@ async function startServer() {
       return res.status(404).json({ error: 'Data Mitra tidak ditemukan.' });
     }
     mitraList.splice(index, 1);
+    saveDatabaseToDisk();
     res.json({ message: 'Data Mitra berhasil dihapus.' });
   });
 
@@ -1402,6 +1619,8 @@ async function startServer() {
     com.notes = notes || '';
     com.journalEntryId = newJournal.id;
 
+    saveDatabaseToDisk();
+
     res.json({
       message: 'Pencairan komisi berhasil dan otomatis diposting ke Jurnal Umum!',
       commission: com,
@@ -1465,6 +1684,8 @@ async function startServer() {
       if (newVPay) vendorPaymentList = newVPay;
       if (newMtr) mitraList = newMtr;
       if (newCom) commissionList = newCom;
+
+      saveDatabaseToDisk();
 
       res.json({
         message: 'Database ERP berhasil dipulihkan dari file backup JSON!',

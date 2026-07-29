@@ -120,6 +120,7 @@ export interface JamaahRegistration {
   unearnedRevenueRecognized: number; // Amount recognized as real revenue upon departure
   status: BookingStatus;
   notes?: string;
+  payments?: JamaahPaymentTransaction[];
 }
 
 export type InstallmentStatus = 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE';

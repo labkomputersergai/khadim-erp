@@ -24,7 +24,31 @@ function ERPMainContent() {
   const [userRole, setUserRole] = useState<UserRole>('ACCOUNTANT');
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth < 768;
+    }
+    return false;
+  });
+
+  // Auto collapse sidebar when screen width resizes to mobile (< 768px)
+  useEffect(() => {
+    let prevWidth = window.innerWidth;
+    const handleResize = () => {
+      const currentWidth = window.innerWidth;
+      if (currentWidth < 768 && prevWidth >= 768) {
+        setIsCollapsed(true);
+      }
+      prevWidth = currentWidth;
+    };
+
+    if (window.innerWidth < 768) {
+      setIsCollapsed(true);
+    }
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Sync role with logged in user, or let header switcher override
   useEffect(() => {
@@ -128,7 +152,7 @@ function ERPMainContent() {
 
       {/* Main Content Area */}
       <div className={`flex-1 flex flex-col min-w-0 min-h-screen w-full max-w-full transition-all duration-300 ease-in-out ${
-        isCollapsed ? 'ml-14 sm:ml-16 md:ml-20' : 'ml-64'
+        isCollapsed ? 'ml-16' : 'ml-16 md:ml-64'
       }`}>
         
         {/* Topbar Header */}
